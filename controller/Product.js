@@ -98,6 +98,7 @@ exports.createProduct = async (req, res) => {
             images: uploadedImages,
             badges,
             fullShopDetails,
+            sellerId:userId
            
         })
         await product.save()

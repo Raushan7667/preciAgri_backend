@@ -1,5 +1,10 @@
 const mongoose = require('mongoose')
 const producrSchema = new mongoose.Schema({
+    sellerId:{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
+        required: true
+    },
     fullShopDetails: {
         type: String,
         required: true,

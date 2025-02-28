@@ -1,43 +1,43 @@
-const User=require('../models/Users')
-const Cart=require('../models/CartItem')
-const Otp=require('../models/Otp')
-const otpGenerator=require('otp-generator')
-const Profile=require('../models/Profile')
-const bcrypt=require('bcrypt')
-const jwt=require('jsonwebtoken')
+const User = require('../models/Users')
+const Cart = require('../models/CartItem')
+const Otp = require('../models/Otp')
+const otpGenerator = require('otp-generator')
+const Profile = require('../models/Profile')
+const bcrypt = require('bcrypt')
+const jwt = require('jsonwebtoken')
 
 
 require('dotenv').config()
-const mailSender=require('../utils/mailSender')
-const {updatePassword}=require('../mail/passwordUpdateTamplet')
+const mailSender = require('../utils/mailSender')
+const { updatePassword } = require('../mail/passwordUpdateTamplet')
 
-exports.SendOtp=async (req,res)=>{
+exports.SendOtp = async (req, res) => {
 
     try {
-        const {email}=req.body;
-        const user=await User.findOne({email})
-        if(user){
+        const { email } = req.body;
+        const user = await User.findOne({ email })
+        if (user) {
             return res.status(401).json({
                 success: false,
                 message: "User already exists"
             })
         }
 
-        let otp=otpGenerator.generate(6, {
+        let otp = otpGenerator.generate(6, {
             upperCaseAlphabets: false,
             lowerCaseAlphabets: false,
             specialChars: false
         })
-        console.log("generated Otp",otp)
-        let result=await Otp.findOne({otp:otp})
-        while(result){
-            otp=otpGenerator.generate(6, {
-                upperCaseAlphabets: false,
-                lowerCaseAlphabets: false,
-                specialChars: false
-            })   
-        }
-        const otpPayload={email,otp}
+        console.log("generated Otp", otp)
+        // let result = await Otp.findOne({ otp: otp })
+        // while (result) {
+        //     otp = otpGenerator.generate(6, {
+        //         upperCaseAlphabets: false,
+        //         lowerCaseAlphabets: false,
+        //         specialChars: false
+        //     })
+        // }
+        const otpPayload = { email, otp }
         const otpBody = await Otp.create(otpPayload)
 
         console.log(otpBody)
@@ -48,25 +48,24 @@ exports.SendOtp=async (req,res)=>{
             otp
         })
 
-        
+
     } catch (error) {
         console.log("error in while creatin otp", error)
         return res.status(500).json({
             success: false,
             message: "Error while creating otp"
         })
-        
+
     }
 }
 
 
 // signup
 
-exports.SignUp=async (req,res)=>{
+exports.SignUp = async (req, res) => {
     try {
         // data fetch from request body
         const { Name,
-     
             email,
             password,
             confirmPassword,
@@ -74,9 +73,9 @@ exports.SignUp=async (req,res)=>{
             accountType
         } = req.body
 
-        console.log("in authentication ",Name,  email, password, otp, accountType,confirmPassword)
+        console.log("in authentication ", Name, email, password, otp, accountType, confirmPassword)
         // validate karo lo
-        if (!Name ||  !email || !password || !confirmPassword || !otp) {
+        if (!Name || !email || !password || !confirmPassword || !otp) {
             return res.status(403).json({
                 success: false,
                 message: "All field are reqired"
@@ -117,12 +116,12 @@ exports.SignUp=async (req,res)=>{
         }
 
 
-        
+
 
         // hash password
         const hashedPassword = await bcrypt.hash(password, 10)
 
- // Create the Additional Profile For User
+        // Create the Additional Profile For User
         const profileDetails = await Profile.create({
             gender: null,
             dateofBirth: null,
@@ -132,7 +131,7 @@ exports.SignUp=async (req,res)=>{
         // create entry in database
         const user = await User.create({
             Name,
-           
+
             email,
             password: hashedPassword,
             accountType,
@@ -160,7 +159,7 @@ exports.SignUp=async (req,res)=>{
 
 // login
 
-exports.Login=async (req,res)=>{
+exports.Login = async (req, res) => {
     try {
         // get data from request body
         const { email, password } = req.body
@@ -182,15 +181,15 @@ exports.Login=async (req,res)=>{
 
         // creat cart for user
 
-          // Check if cart already exists before creating
-          let cart = await Cart.findOne({ userId: user._id });
-          if (!cart) {
-              cart = await Cart.create({ userId: user._id });
-              user.cartId = cart._id;
-              await user.save();
-          }
-     
-       
+        // Check if cart already exists before creating
+        let cart = await Cart.findOne({ userId: user._id });
+        if (!cart) {
+            cart = await Cart.create({ userId: user._id });
+            user.cartId = cart._id;
+            await user.save();
+        }
+
+
 
 
 
@@ -206,90 +205,90 @@ exports.Login=async (req,res)=>{
             const token = jwt.sign(payload, process.env.JWT_SECRET, {
                 expiresIn: "24h"
             })
-             // Save token to user document in database
+            // Save token to user document in database
             user.token = token
             user.password = undefined
-        
 
-        // generate cookie and send resposnse
 
-        const options = {
-            expires: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000),
-            httpOnly: true
+            // generate cookie and send resposnse
+
+            const options = {
+                expires: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000),
+                httpOnly: true
+            }
+            return res.cookie("token", token, options).status(200).json({
+                success: true,
+                token,
+                user,
+                message: "Loged in succesfully"
+            })
         }
-      return  res.cookie("token", token, options).status(200).json({
-            success: true,
-            token,
-            user,
-            message: "Loged in succesfully"
-        })
-    }
-    else{
-        return res.status(401).json({
-            success:false,
-            message:"Password is incorrect"
-        })
-    }
+        else {
+            return res.status(401).json({
+                success: false,
+                message: "Password is incorrect"
+            })
+        }
     } catch (error) {
         console.log(error)
         return res.status(500).json({
-            success:false,
-            message:"Login Failed"
+            success: false,
+            message: "Login Failed"
         })
     }
 }
 
 // get user by id
 
-exports.getUserById=async (req,res)=>{
+exports.getUserById = async (req, res) => {
     try {
-        const user=await User.findById(req.params.userId);
-        if(!user){
+        const user = await User.findById(req.params.userId);
+        if (!user) {
             return res.status(404).json({
-                success:false,
-                message:"User not found"
+                success: false,
+                message: "User not found"
             })
         }
         res.status(200).json({
-            success:true,
+            success: true,
             user
         })
     } catch (error) {
         console.log(error)
         res.status(500).json({
-            success:false,
-            message:"Error while fetching user"
+            success: false,
+            message: "Error while fetching user"
         })
     }
 }
 // get user by token
 
-exports.getUserByToken=async (req,res)=>{
+exports.getUserByToken = async (req, res) => {
     try {
         const token = req.header('Authorization')?.replace('Bearer ', '');
-        if(!token){
+        if (!token) {
             return res.status(401).json({
-                success:false,
-                message:"Unauthorized Access"
+                success: false,
+                message: "Unauthorized Access"
             })
         }
-        const payload=jwt.verify(token, process.env.JWT_SECRET)
-        const user=await User.findById(payload.id);
-        if(!user){
+        const payload = jwt.verify(token, process.env.JWT_SECRET)
+        const user = await User.findById(payload.id);
+        if (!user) {
             return res.status(404).json({
-                success:false,
-                message:"User not found"
+                success: false,
+                message: "User not found"
             })
         }
         res.status(200).json({
-            success:true,
+            success: true,
             user
         })
     } catch (error) {
         console.log(error)
         return res.status(500).json({
-            success:false,
-            message:"Error while fetching user"
+            success: false,
+            message: "Error while fetching user"
         })
     }
 }

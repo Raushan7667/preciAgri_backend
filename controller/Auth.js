@@ -17,9 +17,9 @@ exports.SendOtp = async (req, res) => {
         const { email } = req.body;
         const user = await User.findOne({ email })
         if (user) {
-            return res.status(401).json({
+            return res.status(400).json({
                 success: false,
-                message: "User already exists"
+                message: "This email is already registered. Try logging in instead."
             })
         }
 
@@ -44,16 +44,16 @@ exports.SendOtp = async (req, res) => {
         // return response
         res.status(200).json({
             success: true,
-            Message: "Otp Sent Succcesfully",
+            message: "OTP Sent Succcesfully",
             otp
         })
 
 
     } catch (error) {
-        console.log("error in while creatin otp", error)
+        console.log("error in while creating OTP", error)
         return res.status(500).json({
             success: false,
-            message: "Error while creating otp"
+            message: "Error while sending OTP"
         })
 
     }
@@ -61,7 +61,6 @@ exports.SendOtp = async (req, res) => {
 
 
 // signup
-
 exports.SignUp = async (req, res) => {
     try {
         // data fetch from request body
@@ -78,7 +77,7 @@ exports.SignUp = async (req, res) => {
         if (!Name || !email || !password || !confirmPassword || !otp) {
             return res.status(403).json({
                 success: false,
-                message: "All field are reqired"
+                message: "All field are reqired."
             })
         }
 
@@ -86,14 +85,14 @@ exports.SignUp = async (req, res) => {
         if (password !== confirmPassword) {
             return res.status(400).json({
                 success: false,
-                message: "Password and conferm password doesn't match please try again"
+                message: "Password and Confirm Password doesn't match. Please try again..!"
             })
         }
 
         // check user already exists or not
         const existingUser = await User.findOne({ email })
         if (existingUser) {
-            res.status(400).json({
+            return res.status(400).json({
                 success: false,
                 message: "User already exists"
             })
@@ -106,12 +105,12 @@ exports.SignUp = async (req, res) => {
         if (recentOtp.length == 0) {
             return res.status(400).json({
                 success: false,
-                message: "Otp not found"
+                message: "OTP not found"
             })
         } else if (otp != recentOtp[0].otp) {
             return res.status(400).json({
                 success: false,
-                message: "Invalid otp"
+                message: "Invalid OTP"
             })
         }
 
@@ -131,19 +130,44 @@ exports.SignUp = async (req, res) => {
         // create entry in database
         const user = await User.create({
             Name,
-
             email,
             password: hashedPassword,
             accountType,
             additionalDetail: profileDetails._id,
             image: `https:api.dicebear.com/8.x/initials/svg?seed=${Name}`,
         })
+        // creat cart for user
+        let cart = await Cart.create({ userId: user._id });
+        user.cartId = cart._id;
+        await user.save();
+
+        const payload = {
+            email: user.email,
+            id: user._id,
+            accountType: user.accountType,
+        }
+
+        const token = jwt.sign(payload, process.env.JWT_SECRET, {
+            expiresIn: "24h"
+        })
+        // Save token to user document in database
+        user.token = token
+        user.password = undefined
+
+
+        // generate cookie and send resposnse
+
+        const options = {
+            expires: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000),
+            httpOnly: true
+        }
 
         // return res
-        return res.status(200).json({
+        return res.cookie("token", token, options).status(200).json({
             success: true,
             message: "User is register succesfully ",
-            user
+            user,
+            token
         })
 
 
@@ -175,19 +199,17 @@ exports.Login = async (req, res) => {
         if (!user) {
             return res.status(403).json({
                 success: false,
-                message: "User is not register please signup"
+                message: "No account found with this email. Please sign up."
             })
         }
 
         // creat cart for user
 
         // Check if cart already exists before creating
-        let cart = await Cart.findOne({ userId: user._id });
-        if (!cart) {
-            cart = await Cart.create({ userId: user._id });
-            user.cartId = cart._id;
-            await user.save();
-        }
+        // let cart = await Cart.findOne({ userId: user._id });
+        // if (!cart) {
+
+        // }
 
 
 
@@ -220,20 +242,20 @@ exports.Login = async (req, res) => {
                 success: true,
                 token,
                 user,
-                message: "Loged in succesfully"
+                message: "Loged in succesfully!"
             })
         }
         else {
             return res.status(401).json({
                 success: false,
-                message: "Password is incorrect"
+                message: "Incorrect Password!"
             })
         }
     } catch (error) {
         console.log(error)
         return res.status(500).json({
             success: false,
-            message: "Login Failed"
+            message: "Server error! Please try again later."
         })
     }
 }

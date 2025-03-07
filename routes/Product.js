@@ -14,8 +14,9 @@ const { createProduct,
     getProductById,
     getAllProducts,
     getProductsByParentCategory,
-    getProductsByCategory, 
-    seachProduct} = require('../controller/Product');
+    getProductsByCategory,
+    seachProduct,
+    filterAndSortProducts } = require('../controller/Product');
 
 
 router.post('/createparentcategory', auth, isAdmin, createParentCategory)
@@ -45,20 +46,21 @@ router.delete('/removeitem/:id', auth, isUser, removeCartItem)
 
 
 // wishlist
-const { addToWishList, getWishlistProducts, removeFromWishlist, getWishList }=require('../controller/WishList')
-router.post('/addwishlist',auth,isUser,addToWishList)
-router.get('/getdetailswishlist',auth,isUser,getWishlistProducts)
-router.post('/removewishlist',auth,isUser,removeFromWishlist)
-router.get('/wishlistid', auth,isUser,getWishList)
+const { addToWishList, getWishlistProducts, removeFromWishlist, getWishList } = require('../controller/WishList')
+router.post('/addwishlist', auth, isUser, addToWishList)
+router.get('/getdetailswishlist', auth, isUser, getWishlistProducts)
+router.post('/removewishlist', auth, isUser, removeFromWishlist)
+router.get('/wishlistid', auth, isUser, getWishList)
 
 
-router.get('/searchProducts/search',seachProduct)
+router.get('/searchProducts/search', seachProduct)
+router.get('/filterandSortProducts', filterAndSortProducts)
 
 
 // rating and review
-const { createRatingAndReview, getAllRatingsAndReviews }=require('../controller/RatingAndReview')
-router.post("/create", auth, createRatingAndReview); 
-router.get("/:productId", getAllRatingsAndReviews); 
+const { createRatingAndReview, getAllRatingsAndReviews } = require('../controller/RatingAndReview')
+router.post("/create", auth, createRatingAndReview);
+router.get("/:productId", getAllRatingsAndReviews);
 
 
 

@@ -143,3 +143,23 @@ exports.getOrderHistory = async (req, res) => {
     }
 };
 
+// seller order history
+exports.getSellerOrderHistory = async (req, res) => {
+    try {
+        const sellerId = req.user.id;
+        const orders = await Order.find({ 'items.product.sellerId': sellerId }).populate('items.product');
+
+        if (!orders) {
+            return res.status(404).json({ message: "No orders found." });
+        }
+
+        res.status(201).json({
+            message: "Order history retrieved successfully.",
+            orders: orders
+        });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: "Internal server error.", error });
+    }
+};
+

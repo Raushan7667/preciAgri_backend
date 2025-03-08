@@ -46,9 +46,10 @@ router.delete('/removeitem/:id', auth, isUser, removeCartItem)
 
 
 // wishlist
-const { addToWishList, getWishlistProducts, removeFromWishlist, getWishList } = require('../controller/WishList')
+const { addToWishList, getWishlistProducts, removeFromWishlist, getWishList, getWishlistProductsMinimal } = require('../controller/WishList')
 router.post('/addwishlist', auth, isUser, addToWishList)
 router.get('/getdetailswishlist', auth, isUser, getWishlistProducts)
+router.get('/getminimalwishlist', auth, isUser, getWishlistProductsMinimal)
 router.post('/removewishlist', auth, isUser, removeFromWishlist)
 router.get('/wishlistid', auth, isUser, getWishList)
 

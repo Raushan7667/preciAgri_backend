@@ -280,6 +280,177 @@ exports.seachProduct = async (req, res) => {
     }
 };
 
+// find all product for a seller that listed
+exports.getAllProductBySeller = async (req, res) => {
+    try {
+        const userId = req.user.id
+        const products = await Product.find({ sellerId: userId })
+        if (!products) {
+            return res.status(404).json({
+                success: false,
+                msg: 'Products not found'
+            })
+        }
+
+        res.status(200).json({
+            success: true,
+            msg: 'Products found successfully',
+            products
+        })
+
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({
+            success: false,
+            msg: 'Some thing error while finding products'
+        })
+    }
+}
+
+// delete products
+exports.deleteProduct = async (req, res) => {
+    try {
+        const userId = req.user.id
+        const productId = req.params.productId
+        const product = await Product.findById(productId)
+        if (!product) {
+            return res.status(404).json({
+                success: false,
+                msg: 'Product not found'
+            })
+        }
+
+        if (product.sellerId != userId) {
+            return res.status(401).json({
+                success: false,
+                msg: 'You are not authorized to delete this product'
+            })
+        }
+
+        await Product.findByIdAndDelete(productId)
+        // also remove from category and user schema
+        await Category.findByIdAndUpdate(product.category, {
+            $pull: {
+                product: productId
+            }
+        })
+        await User.findByIdAndUpdate(userId, {
+            $pull: {
+                products: productId
+            }
+        })
+        // send notification to admin
+
+        res.status(200).json({
+            success: true,
+            msg: 'Product deleted successfully'
+        })
+
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({
+            success: false,
+            msg: 'Some thing error while deleting product'
+        })
+    }
+}
 
 
+// edit product
+exports.editProduct = async (req, res) => {
+    try {
+        const userId = req.user.id
+        const productId = req.params.productId
+        const product = await Product.findById(productId)
+        if (!product) {
+            return res.status(404).json({
+                success: false,
+                msg: 'Product not found'
+            })
+        }
 
+        // Check if the user is the seller of this product
+        if (product.sellerId.toString() !== userId) {
+            return res.status(401).json({
+                success: false,
+                msg: 'You are not authorized to edit this product'
+            })
+        }
+
+        const {
+            name,
+            price_size,
+            category,
+            description,
+            tag: _tag,
+            badges,
+            fullShopDetails
+        } = req.body
+
+        const parsedPriceSize = Array.isArray(price_size) ? price_size : JSON.parse(price_size);
+        let tag = _tag ? JSON.parse(_tag) : product.tag;
+
+        // Handle image updates if new images are provided
+        let updatedImages = product.images;
+        if (req.files && req.files.image) {
+            const image = req.files.image;
+            const uploadedImages = [];
+            for (let i = 0; i < image.length; i++) {
+                const imagei = image[i];
+                const uploadimage = await uploadUmageToCloudinary(imagei, process.env.FOLDER_NAME, 1000, 1000);
+                uploadedImages.push(uploadimage.secure_url);
+            }
+            updatedImages = uploadedImages;
+        }
+
+        // If category is being updated, verify it exists
+        if (category && category !== product.category.toString()) {
+            const categoryExists = await Category.findById(category);
+            if (!categoryExists) {
+                return res.status(404).json({
+                    success: false,
+                    msg: 'New category not found'
+                });
+            }
+
+            // Remove product from old category
+            await Category.findByIdAndUpdate(product.category, {
+                $pull: { product: productId }
+            });
+
+            // Add product to new category
+            await Category.findByIdAndUpdate(category, {
+                $push: { product: productId }
+            });
+        }
+
+        // Update product with new values
+        const updatedProduct = await Product.findByIdAndUpdate(
+            productId,
+            {
+                name: name || product.name,
+                price_size: parsedPriceSize || product.price_size,
+                category: category || product.category,
+                description: description || product.description,
+                tag: tag,
+                images: updatedImages,
+                badges: badges || product.badges,
+                fullShopDetails: fullShopDetails || product.fullShopDetails
+            },
+            { new: true }
+        );
+
+        res.status(200).json({
+            success: true,
+            msg: 'Product updated successfully',
+            product: updatedProduct
+        });
+
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({
+            success: false,
+            msg: 'Something went wrong while updating the product'
+        });
+    }
+}

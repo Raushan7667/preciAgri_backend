@@ -24,7 +24,7 @@ const userSchema=new mongoose.Schema({
     },
     accountType:{
         type:String,
-        default:'user',
+        default:'User',
         required:true,
     },
     additionalDetails:{

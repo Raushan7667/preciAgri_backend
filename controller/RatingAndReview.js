@@ -20,6 +20,19 @@ exports.createRatingAndReview = async (req, res) => {
             return res.status(400).json({ success: false, message: "You have already reviewed this product" });
         }
 
+        // Update Rating Distribution
+        productExists.ratings.distribution[rating] += 1;
+
+        //  Update Total Ratings Count
+        productExists.ratings.count += 1;
+
+        // Recalculate Average Rating
+        let totalStars = 0;
+        for (let i = 1; i <= 5; i++) {
+            totalStars += i * productExists.ratings.distribution[i]; // (1*count1 + 2*count2 + ... + 5*count5)
+        }
+        productExists.ratings.average = totalStars / productExists.ratings.count;
+        await productExists.save();
         // Create a new review
         const newReview = await RatingAndReview.create({
             user: userId,
@@ -27,11 +40,11 @@ exports.createRatingAndReview = async (req, res) => {
             rating,
             review
         });
-           const ratingAndReview = await Product.findByIdAndUpdate(productId, {
-                    $push: {
-                        ratingandreview: newReview._id
-                    }
-                }, { new: true })
+        const ratingAndReview = await Product.findByIdAndUpdate(productId, {
+            $push: {
+                ratingandreview: newReview._id
+            }
+        }, { new: true })
 
         res.status(201).json({ success: true, message: "Review added successfully", data: newReview });
     } catch (error) {

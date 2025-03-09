@@ -64,6 +64,23 @@ const producrSchema = new mongoose.Schema({
         type: Number,
         default: 0
     }, // New field to store the average rating
+    ratings: {
+        average: {
+            type: Number,
+            default: 0
+        },
+        count: {
+            type: Number,
+            default: 0
+        },
+        distribution: {
+            1: { type: Number, default: 0 },
+            2: { type: Number, default: 0 },
+            3: { type: Number, default: 0 },
+            4: { type: Number, default: 0 },
+            5: { type: Number, default: 0 }
+        }
+    },
     updatedAt: {
         type: Date,
         default: Date.now()

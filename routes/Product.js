@@ -15,7 +15,9 @@ const { createProduct,
     getAllProducts,
     getProductsByParentCategory,
     getProductsByCategory, 
-    seachProduct} = require('../controller/Product');
+    seachProduct,
+    getAllProductBySeller,
+    editProduct} = require('../controller/Product');
 
 
 router.post('/createparentcategory', auth, isAdmin, createParentCategory)
@@ -53,12 +55,17 @@ router.get('/wishlistid', auth,isUser,getWishList)
 
 
 router.get('/searchProducts/search',seachProduct)
+router.get('/sellerProductt',auth,isSeller,getAllProductBySeller)
 
 
 // rating and review
 const { createRatingAndReview, getAllRatingsAndReviews }=require('../controller/RatingAndReview')
 router.post("/create", auth, createRatingAndReview); 
 router.get("/:productId", getAllRatingsAndReviews); 
+
+
+// edit product
+router.put('/editproduct/:productId',auth,isSeller,editProduct)
 
 
 

@@ -365,6 +365,97 @@ exports.filterAndSortProducts = async (req, res) => {
         if (tag) query.tag = { $in: tag.split(",") };
 
 // edit product
+
+        // Price range filter
+        if (minPrice || maxPrice) {
+            query["price_size"] = { $elemMatch: {} };
+            if (minPrice) query["price_size"].$elemMatch.price = { $gte: Number(minPrice) };
+            if (maxPrice) query["price_size"].$elemMatch.price = { $lte: Number(maxPrice) };
+        }
+
+        // Discount percentage filter
+        // if (minDiscount || maxDiscount) {
+        //     query["price_size"] = query["price_size"] || { $elemMatch: {} };
+        //     query["price_size"].$elemMatch["$expr"] = {};
+
+        //     if (minDiscount) {
+        //         query["price_size"].$elemMatch["$expr"].$gte = [
+        //             { $multiply: [{ $divide: ["$discountedPrice", "$price"] }, 100] },
+        //             Number(minDiscount),
+        //         ];
+        //     }
+
+        //     if (maxDiscount) {
+        //         query["price_size"].$elemMatch["$expr"].$lte = [
+        //             { $multiply: [{ $divide: ["$discountedPrice", "$price"] }, 100] },
+        //             Number(maxDiscount),
+        //         ];
+        //     }
+        // }
+
+        // Full-text search (splitting query into words and searching in tags)
+        if (search) {
+            const words = search.split(" ");
+            const searchRegexArray = words.map(word => new RegExp(word, 'i'));
+            query.tag = { $in: searchRegexArray };
+        }
+
+        // Sorting
+        if (sortBy) {
+            const sortFields = sortBy.split(",");
+            sortFields.forEach(field => {
+                const order = field.startsWith("-") ? -1 : 1;
+                const key = field.replace("-", "");
+
+                if (key === "price") {
+                    sort["price_size.price"] = order;
+                } else {
+                    sort[key] = order;
+                }
+            });
+        } else {
+            sort.createdAt = -1;
+        }
+
+        // Pagination
+        const pageNumber = parseInt(page) || 1;
+        const pageSize = parseInt(limit) || 15;
+        const skip = (pageNumber - 1) * pageSize;
+
+        // Fetching minimal product details
+        const products = await Product.aggregate([
+            { $match: query },
+            { $unwind: "$price_size" },
+            { $sort: sort },
+            { $skip: skip },
+            { $limit: pageSize },
+            {
+                $project: {
+                    _id: 1,
+                    name: 1,
+                    price_size: 1,
+                    images: { $arrayElemAt: ["$images", 0] }, // First image
+                    avgRating: 1,
+                },
+            },
+        ]);
+
+        // Total count for pagination
+        const totalProducts = await Product.countDocuments(query);
+
+        res.status(200).json({
+            success: true,
+            totalProducts,
+            totalPages: Math.ceil(totalProducts / pageSize),
+            currentPage: pageNumber,
+            pageSize,
+            products,
+        });
+
+    } catch (error) {
+        res.status(500).json({ success: false, message: "Server Error", error: error.message });
+    }
+};
 exports.editProduct = async (req, res) => {
     try {
         const userId = req.user.id
@@ -462,93 +553,3 @@ exports.editProduct = async (req, res) => {
         });
     }
 }
-        // Price range filter
-        if (minPrice || maxPrice) {
-            query["price_size"] = { $elemMatch: {} };
-            if (minPrice) query["price_size"].$elemMatch.price = { $gte: Number(minPrice) };
-            if (maxPrice) query["price_size"].$elemMatch.price = { $lte: Number(maxPrice) };
-        }
-
-        // Discount percentage filter
-        // if (minDiscount || maxDiscount) {
-        //     query["price_size"] = query["price_size"] || { $elemMatch: {} };
-        //     query["price_size"].$elemMatch["$expr"] = {};
-
-        //     if (minDiscount) {
-        //         query["price_size"].$elemMatch["$expr"].$gte = [
-        //             { $multiply: [{ $divide: ["$discountedPrice", "$price"] }, 100] },
-        //             Number(minDiscount),
-        //         ];
-        //     }
-
-        //     if (maxDiscount) {
-        //         query["price_size"].$elemMatch["$expr"].$lte = [
-        //             { $multiply: [{ $divide: ["$discountedPrice", "$price"] }, 100] },
-        //             Number(maxDiscount),
-        //         ];
-        //     }
-        // }
-
-        // Full-text search (splitting query into words and searching in tags)
-        if (search) {
-            const words = search.split(" ");
-            const searchRegexArray = words.map(word => new RegExp(word, 'i'));
-            query.tag = { $in: searchRegexArray };
-        }
-
-        // Sorting
-        if (sortBy) {
-            const sortFields = sortBy.split(",");
-            sortFields.forEach(field => {
-                const order = field.startsWith("-") ? -1 : 1;
-                const key = field.replace("-", "");
-
-                if (key === "price") {
-                    sort["price_size.price"] = order;
-                } else {
-                    sort[key] = order;
-                }
-            });
-        } else {
-            sort.createdAt = -1;
-        }
-
-        // Pagination
-        const pageNumber = parseInt(page) || 1;
-        const pageSize = parseInt(limit) || 15;
-        const skip = (pageNumber - 1) * pageSize;
-
-        // Fetching minimal product details
-        const products = await Product.aggregate([
-            { $match: query },
-            { $unwind: "$price_size" },
-            { $sort: sort },
-            { $skip: skip },
-            { $limit: pageSize },
-            {
-                $project: {
-                    _id: 1,
-                    name: 1,
-                    price_size: 1,
-                    images: { $arrayElemAt: ["$images", 0] }, // First image
-                    avgRating: 1,
-                },
-            },
-        ]);
-
-        // Total count for pagination
-        const totalProducts = await Product.countDocuments(query);
-
-        res.status(200).json({
-            success: true,
-            totalProducts,
-            totalPages: Math.ceil(totalProducts / pageSize),
-            currentPage: pageNumber,
-            pageSize,
-            products,
-        });
-
-    } catch (error) {
-        res.status(500).json({ success: false, message: "Server Error", error: error.message });
-    }
-};

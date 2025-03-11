@@ -42,11 +42,14 @@ router.get('/getproductbycategory', getProductsByCategory)
 
 const { addToProductToCart,
     getCartItems,
-    removeCartItem } = require('../controller/AddToCart');
+    removeCartItem, addProductToCartApp, getCartItemsApp, clearCart } = require('../controller/AddToCart');
 
 router.post('/addtocart', auth, isUser, addToProductToCart)
+router.post('/addtocartapp', auth, isUser, addProductToCartApp)
 router.get('/cartitems', auth, isUser, getCartItems)
+router.get('/cartitemsapp', auth, isUser, getCartItemsApp)
 router.delete('/removeitem/:id', auth, isUser, removeCartItem)
+router.delete('/clearcart', auth, isUser, clearCart);
 
 
 // wishlist

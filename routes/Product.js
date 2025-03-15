@@ -7,6 +7,7 @@ const {
     createParentCategory,
     getAllParentCategories,
     getParentCategoryById,
+    getParentCategoriesList
 
 } = require('../controller/Category');
 const { auth, isAdmin, isUser, isSeller } = require('../middleware/auth');
@@ -16,11 +17,12 @@ const { createProduct,
     getProductsByParentCategory,
     getProductsByCategory,
     seachProduct,
-    filterAndSortProducts } = require('../controller/Product');
+    getFilteredProducts } = require('../controller/Product');
 
 
 router.post('/createparentcategory', auth, isAdmin, createParentCategory)
 router.get('/getallparentcategory', getAllParentCategories)
+router.get('/getcategorylist', getParentCategoriesList)
 router.post('/getonecategory', getParentCategoryById)
 router.post("/createcategory", auth, isAdmin, createCategory)
 router.get('/getCategory', getCategories)
@@ -58,7 +60,7 @@ router.get('/wishlistid', auth, isUser, getWishList)
 
 
 router.get('/searchProducts/search', seachProduct)
-router.get('/filterandSortProducts', filterAndSortProducts)
+router.get('/filteredproducts', getFilteredProducts)
 
 
 // rating and review

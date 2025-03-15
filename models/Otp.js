@@ -1,6 +1,6 @@
 const mongoose = require('mongoose')
-const mailSender=require("../utils/mailSender")
-const emailTemplate=require("../mail/otpVerificationTemplet")
+const mailSender = require("../utils/mailSender")
+const emailTemplate = require("../mail/otpVerificationTemplet")
 
 const otpSchema = new mongoose.Schema({
     email: {
@@ -22,19 +22,19 @@ const otpSchema = new mongoose.Schema({
 // send mail
 async function sendVerificationmail(email, otp) {
     try {
-        	// Create a transporter to send emails
+        // Create a transporter to send emails
 
-	// Define the email options
-        const mailResponse = await mailSender(email, "Verfication mail from eFarming",emailTemplate(otp));
-        console.log("Email Sent Succesfully",mailResponse);
+        // Define the email options
+        const mailResponse = await mailSender(email, "PreciAgri - Verification Code", emailTemplate(otp));
+        console.log("Email Sent Succesfully", mailResponse);
     } catch (error) {
         console.log("Error occour at sending email")
         console.log(error)
     }
 }
 
-otpSchema.pre('save',async function(next){
-    await sendVerificationmail(this.email,this.otp)
+otpSchema.pre('save', async function (next) {
+    await sendVerificationmail(this.email, this.otp)
     next();
 })
 

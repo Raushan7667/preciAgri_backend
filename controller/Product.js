@@ -98,7 +98,7 @@ exports.createProduct = async (req, res) => {
             images: uploadedImages,
             badges,
             fullShopDetails,
-            sellerId:userId
+            sellerId: userId
         })
         await product.save()
 
@@ -279,104 +279,526 @@ exports.seachProduct = async (req, res) => {
     }
 };
 
-exports.filterAndSortProducts = async (req, res) => {
+// exports.filterAndSortProducts = async (req, res) => {
+//     try {
+//         let query = {};
+//         let sort = {};
+//         let { category, name, tag, minPrice, maxPrice, minDiscount, maxDiscount, sortBy, page, limit, search } = req.query;
+
+//         // Filtering by category, name, or tags
+//         if (category) query.category = category;
+//         if (name) query.name = { $regex: name, $options: "i" };
+//         if (tag) query.tag = { $in: tag.split(",") };
+
+//         // Price range filter
+//         if (minPrice || maxPrice) {
+//             query["price_size"] = { $elemMatch: {} };
+//             if (minPrice) query["price_size"].$elemMatch.price = { $gte: Number(minPrice) };
+//             if (maxPrice) query["price_size"].$elemMatch.price = { $lte: Number(maxPrice) };
+//         }
+
+//         // Discount percentage filter
+//         // if (minDiscount || maxDiscount) {
+//         //     query["price_size"] = query["price_size"] || { $elemMatch: {} };
+//         //     query["price_size"].$elemMatch["$expr"] = {};
+
+//         //     if (minDiscount) {
+//         //         query["price_size"].$elemMatch["$expr"].$gte = [
+//         //             { $multiply: [{ $divide: ["$discountedPrice", "$price"] }, 100] },
+//         //             Number(minDiscount),
+//         //         ];
+//         //     }
+
+//         //     if (maxDiscount) {
+//         //         query["price_size"].$elemMatch["$expr"].$lte = [
+//         //             { $multiply: [{ $divide: ["$discountedPrice", "$price"] }, 100] },
+//         //             Number(maxDiscount),
+//         //         ];
+//         //     }
+//         // }
+
+//         // Full-text search (splitting query into words and searching in tags)
+//         if (search) {
+//             const words = search.split(" ");
+//             const searchRegexArray = words.map(word => new RegExp(word, 'i'));
+//             query.tag = { $in: searchRegexArray };
+//         }
+
+//         // Sorting
+//         if (sortBy) {
+//             const sortFields = sortBy.split(",");
+//             sortFields.forEach(field => {
+//                 const order = field.startsWith("-") ? -1 : 1;
+//                 const key = field.replace("-", "");
+
+//                 if (key === "price") {
+//                     sort["price_size.price"] = order;
+//                 } else {
+//                     sort[key] = order;
+//                 }
+//             });
+//         } else {
+//             sort.createdAt = -1;
+//         }
+
+//         // Pagination
+//         const pageNumber = parseInt(page) || 1;
+//         const pageSize = parseInt(limit) || 15;
+//         const skip = (pageNumber - 1) * pageSize;
+
+//         // Fetching minimal product details
+//         const products = await Product.aggregate([
+//             { $match: query },
+//             { $unwind: "$price_size" },
+//             { $sort: sort },
+//             { $skip: skip },
+//             { $limit: pageSize },
+//             {
+//                 $project: {
+//                     _id: 1,
+//                     name: 1,
+//                     price_size: 1,
+//                     images: { $arrayElemAt: ["$images", 0] }, // First image
+//                     avgRating: 1,
+//                 },
+//             },
+//         ]);
+
+//         // Total count for pagination
+//         const totalProducts = await Product.countDocuments(query);
+
+//         res.status(200).json({
+//             success: true,
+//             totalProducts,
+//             totalPages: Math.ceil(totalProducts / pageSize),
+//             currentPage: pageNumber,
+//             pageSize,
+//             products,
+//         });
+
+//     } catch (error) {
+//         res.status(500).json({ success: false, message: "Server Error", error: error.message });
+//     }
+// };
+
+
+exports.getFilteredProducts = async (req, res) => {
     try {
-        let query = {};
-        let sort = {};
-        let { category, name, tag, minPrice, maxPrice, minDiscount, maxDiscount, sortBy, page, limit, search } = req.query;
+        const {
+            search,
+            category,
+            minPrice,
+            maxPrice,
+            minDiscount,
+            minRating,
+            tags,
+            badges,
+            sellerId,
+            sort = 'newest',
+            page = 1,
+            limit = 10
+        } = req.query;
+        // Build the filter object
+        const filter = {};
 
-        // Filtering by category, name, or tags
-        if (category) query.category = category;
-        if (name) query.name = { $regex: name, $options: "i" };
-        if (tag) query.tag = { $in: tag.split(",") };
-
-        // Price range filter
-        if (minPrice || maxPrice) {
-            query["price_size"] = { $elemMatch: {} };
-            if (minPrice) query["price_size"].$elemMatch.price = { $gte: Number(minPrice) };
-            if (maxPrice) query["price_size"].$elemMatch.price = { $lte: Number(maxPrice) };
-        }
-
-        // Discount percentage filter
-        // if (minDiscount || maxDiscount) {
-        //     query["price_size"] = query["price_size"] || { $elemMatch: {} };
-        //     query["price_size"].$elemMatch["$expr"] = {};
-
-        //     if (minDiscount) {
-        //         query["price_size"].$elemMatch["$expr"].$gte = [
-        //             { $multiply: [{ $divide: ["$discountedPrice", "$price"] }, 100] },
-        //             Number(minDiscount),
-        //         ];
-        //     }
-
-        //     if (maxDiscount) {
-        //         query["price_size"].$elemMatch["$expr"].$lte = [
-        //             { $multiply: [{ $divide: ["$discountedPrice", "$price"] }, 100] },
-        //             Number(maxDiscount),
-        //         ];
-        //     }
-        // }
-
-        // Full-text search (splitting query into words and searching in tags)
+        // Search by name or tags
         if (search) {
-            const words = search.split(" ");
-            const searchRegexArray = words.map(word => new RegExp(word, 'i'));
-            query.tag = { $in: searchRegexArray };
+            filter.$or = [
+                { name: { $regex: search, $options: 'i' } },
+                { tag: { $in: [new RegExp(search, 'i')] } }
+            ];
+        }
+        //search by category
+        if (category) {
+            // Split the comma-separated string into an array of IDs
+            const categoryIds = category.split(',');
+            // Use $in operator to match any product whose category is in the array
+            filter.category = { $in: categoryIds };
         }
 
-        // Sorting
-        if (sortBy) {
-            const sortFields = sortBy.split(",");
-            sortFields.forEach(field => {
-                const order = field.startsWith("-") ? -1 : 1;
-                const key = field.replace("-", "");
+        // Tags filter (multiple tags possible)
+        if (tags) {
+            const tagArray = tags.split(',').map(tag => tag.trim());
+            filter.tag = { $in: tagArray };
+        }
 
-                if (key === "price") {
-                    sort["price_size.price"] = order;
-                } else {
-                    sort[key] = order;
+        // Badge filter
+        if (badges) {
+            filter.badges = badges;
+        }
+
+        // Seller filter
+        if (sellerId) {
+            filter.sellerId = sellerId;
+        }
+
+        // Rating filter
+        if (minRating) {
+            filter.avgRating = { $gte: parseFloat(minRating) };
+        }
+
+        // Price filter (needs special handling since price is in an array)
+        if (minPrice || maxPrice) {
+            filter['price_size.price'] = {};
+
+            if (minPrice) {
+                filter['price_size.price'].$gte = parseFloat(minPrice);
+            }
+
+            if (maxPrice) {
+                filter['price_size.price'].$lte = parseFloat(maxPrice);
+            }
+        }
+
+        // Discount filter (calculated as percentage)
+        if (minDiscount) {
+            // We'll handle this in the aggregation pipeline
+        }
+
+        // Set up sort options
+        let sortOption = {};
+        switch (sort) {
+            case 'newest':
+                sortOption = { createdAt: -1 };
+                break;
+            case 'price_asc':
+                // Will use $sort in aggregation pipeline
+                break;
+            case 'price_desc':
+                // Will use $sort in aggregation pipeline
+                break;
+            case 'rating':
+                sortOption = { avgRating: -1 };
+                break;
+            case 'popularity':
+                sortOption = { 'ratings.count': -1 };
+                break;
+            case 'discount':
+                // Will use $sort in aggregation pipeline
+                break;
+            default:
+                sortOption = { createdAt: -1 }; // Default to newest
+        }
+
+        // Calculate pagination
+        const skip = (parseInt(page) - 1) * parseInt(limit);
+
+        // Build the aggregation pipeline
+        const pipeline = [];
+
+        // Match stage (apply filters)
+        pipeline.push({ $match: filter });
+
+        // Unwind the price_size array for price/discount filtering
+        if (minPrice || maxPrice || minDiscount || sort === 'price_asc' || sort === 'price_desc' || sort === 'discount') {
+            pipeline.push({ $unwind: '$price_size' });
+
+            // Additional filtering after unwind
+            const additionalMatch = {};
+
+            // Price range filtering (after unwind)
+            if (minPrice) {
+                additionalMatch['price_size.price'] = additionalMatch['price_size.price'] || {};
+                additionalMatch['price_size.price'].$gte = parseFloat(minPrice);
+            }
+
+            if (maxPrice) {
+                additionalMatch['price_size.price'] = additionalMatch['price_size.price'] || {};
+                additionalMatch['price_size.price'].$lte = parseFloat(maxPrice);
+            }
+
+            // Discount percentage filtering
+            if (minDiscount) {
+                pipeline.push({
+                    $addFields: {
+                        discountPercentage: {
+                            $multiply: [
+                                {
+                                    $divide: [
+                                        { $subtract: ['$price_size.price', '$price_size.discountedPrice'] },
+                                        '$price_size.price'
+                                    ]
+                                },
+                                100
+                            ]
+                        }
+                    }
+                });
+
+                additionalMatch.discountPercentage = { $gte: parseFloat(minDiscount) };
+            }
+
+            if (Object.keys(additionalMatch).length > 0) {
+                pipeline.push({ $match: additionalMatch });
+            }
+
+            // Group back after unwinding
+            pipeline.push({
+                $group: {
+                    _id: '$_id',
+                    name: { $first: '$name' },
+                    price_size: { $push: '$price_size' },
+                    images: { $first: '$images' },
+                    avgRating: { $first: '$avgRating' },
+                    ratings: { $first: '$ratings' },
+                    createdAt: { $first: '$createdAt' },
+                    badges: { $first: '$badges' },
+                    // Store min/max values for sorting
+                    minPrice: { $min: '$price_size.price' },
+                    maxPrice: { $max: '$price_size.price' },
+                    maxDiscount: {
+                        $max: {
+                            $cond: [
+                                { $eq: ['$price_size.price', 0] },
+                                0,
+                                {
+                                    $multiply: [
+                                        {
+                                            $divide: [
+                                                { $subtract: ['$price_size.price', '$price_size.discountedPrice'] },
+                                                '$price_size.price'
+                                            ]
+                                        },
+                                        100
+                                    ]
+                                }
+                            ]
+                        }
+                    }
                 }
             });
+        }
+
+        // Sort based on selected option
+        if (sort === 'price_asc') {
+            pipeline.push({ $sort: { minPrice: 1 } });
+        } else if (sort === 'price_desc') {
+            pipeline.push({ $sort: { minPrice: -1 } });
+        } else if (sort === 'discount') {
+            pipeline.push({ $sort: { maxDiscount: -1 } });
         } else {
-            sort.createdAt = -1;
+            pipeline.push({ $sort: sortOption });
         }
 
         // Pagination
-        const pageNumber = parseInt(page) || 1;
-        const pageSize = parseInt(limit) || 15;
-        const skip = (pageNumber - 1) * pageSize;
+        pipeline.push({ $skip: skip });
+        pipeline.push({ $limit: parseInt(limit) });
 
-        // Fetching minimal product details
-        const products = await Product.aggregate([
-            { $match: query },
-            { $unwind: "$price_size" },
-            { $sort: sort },
-            { $skip: skip },
-            { $limit: pageSize },
+        // Project only required fields
+        pipeline.push({
+            $project: {
+                _id: 1,
+                name: 1,
+                price_size: 1,
+                images: { $arrayElemAt: ["$images", 0] }, // First image only
+                avgRating: 1,
+            }
+        });
+
+        // Execute the aggregation pipeline
+        const products = await Product.aggregate(pipeline);
+
+        // Get total count for pagination
+        const countPipeline = [...pipeline];
+        // Remove skip, limit and project from count pipeline
+        countPipeline.splice(countPipeline.findIndex(stage => Object.keys(stage)[0] === '$skip'), 3);
+        countPipeline.push({ $count: 'total' });
+
+        const totalResults = await Product.aggregate(countPipeline);
+        const total = totalResults.length > 0 ? totalResults[0].total : 0;
+
+        res.status(200).json({
+            success: true,
+            data: {
+                products,
+                pagination: {
+                    total,
+                    page: parseInt(page),
+                    limit: parseInt(limit),
+                    totalPages: Math.ceil(total / parseInt(limit))
+                }
+            }
+        });
+    } catch (error) {
+        console.error('Error fetching products:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to fetch products',
+            error: error.message
+        });
+    }
+};
+
+/**
+ * Get featured products (best sellers, top rated, etc.)
+ */
+exports.getFeaturedProducts = async (req, res) => {
+    try {
+        const { type = 'bestSeller', limit = 8 } = req.query;
+
+        let filter = {};
+        let sort = {};
+
+        switch (type) {
+            case 'bestSeller':
+                filter.badges = 'Best Seller';
+                sort = { 'ratings.count': -1 };
+                break;
+            case 'featured':
+                filter.badges = 'Featured';
+                sort = { createdAt: -1 };
+                break;
+            case 'newArrival':
+                filter.badges = 'New Arrival';
+                sort = { createdAt: -1 };
+                break;
+            case 'topRated':
+                filter.avgRating = { $gte: 4 };
+                sort = { avgRating: -1 };
+                break;
+            case 'mostDiscounted':
+                // Handled in pipeline
+                break;
+            default:
+                filter = {};
+                sort = { createdAt: -1 };
+        }
+
+        const pipeline = [
+            { $match: filter }
+        ];
+
+        if (type === 'mostDiscounted') {
+            // Unwind to find items with biggest discounts
+            pipeline.push(
+                { $unwind: '$price_size' },
+                {
+                    $addFields: {
+                        discountPercentage: {
+                            $multiply: [
+                                {
+                                    $divide: [
+                                        { $subtract: ['$price_size.price', '$price_size.discountedPrice'] },
+                                        '$price_size.price'
+                                    ]
+                                },
+                                100
+                            ]
+                        }
+                    }
+                },
+                { $sort: { discountPercentage: -1 } },
+                {
+                    $group: {
+                        _id: '$_id',
+                        name: { $first: '$name' },
+                        price_size: { $push: '$price_size' },
+                        images: { $first: '$images' },
+                        avgRating: { $first: '$avgRating' },
+                        discountPercentage: { $max: '$discountPercentage' }
+                    }
+                },
+                { $sort: { discountPercentage: -1 } }
+            );
+        } else {
+            pipeline.push({ $sort: sort });
+        }
+
+        pipeline.push(
+            { $limit: parseInt(limit) },
             {
                 $project: {
                     _id: 1,
                     name: 1,
                     price_size: 1,
-                    images: { $arrayElemAt: ["$images", 0] }, // First image
+                    images: { $arrayElemAt: ["$images", 0] },
                     avgRating: 1,
-                },
-            },
-        ]);
+                }
+            }
+        );
 
-        // Total count for pagination
-        const totalProducts = await Product.countDocuments(query);
+        const products = await Product.aggregate(pipeline);
 
         res.status(200).json({
             success: true,
-            totalProducts,
-            totalPages: Math.ceil(totalProducts / pageSize),
-            currentPage: pageNumber,
-            pageSize,
-            products,
+            data: products
         });
-
     } catch (error) {
-        res.status(500).json({ success: false, message: "Server Error", error: error.message });
+        console.error('Error fetching featured products:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to fetch featured products',
+            error: error.message
+        });
+    }
+};
+
+/**
+ * Get product recommendations (similar products)
+ */
+exports.getRecommendedProducts = async (req, res) => {
+    try {
+        const { productId, limit = 4 } = req.params;
+
+        // Get the product details to find similar ones
+        const product = await Product.findById(productId);
+
+        if (!product) {
+            return res.status(404).json({
+                success: false,
+                message: 'Product not found'
+            });
+        }
+
+        // Find similar products based on category and tags
+        const recommendedProducts = await Product.aggregate([
+            {
+                $match: {
+                    _id: { $ne: product._id }, // Exclude current product
+                    $or: [
+                        { category: product.category },
+                        { tag: { $in: product.tag } }
+                    ]
+                }
+            },
+            // Add a relevance score (more matching tags = higher relevance)
+            {
+                $addFields: {
+                    relevanceScore: {
+                        $add: [
+                            { $cond: [{ $eq: ["$category", product.category] }, 3, 0] },
+                            {
+                                $size: {
+                                    $setIntersection: ["$tag", product.tag]
+                                }
+                            }
+                        ]
+                    }
+                }
+            },
+            { $sort: { relevanceScore: -1, avgRating: -1 } },
+            { $limit: parseInt(limit) },
+            {
+                $project: {
+                    _id: 1,
+                    name: 1,
+                    price_size: 1,
+                    images: { $arrayElemAt: ["$images", 0] },
+                    avgRating: 1,
+                }
+            }
+        ]);
+
+        res.status(200).json({
+            success: true,
+            data: recommendedProducts
+        });
+    } catch (error) {
+        console.error('Error fetching recommended products:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to fetch recommended products',
+            error: error.message
+        });
     }
 };

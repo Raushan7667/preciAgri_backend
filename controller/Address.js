@@ -93,3 +93,48 @@ exports.deleteAddress = async (req, res) => {
         res.status(500).send("Server error")
     }
 }
+
+// update address by id
+exports.updateAddress = async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const addressId = req.params.editingAddressId;
+        const { Name, streetAddress, city, state, zipCode, mobile } = req.body;
+
+        // Check if address exists and belongs to user
+        const address = await Address.findOne({ _id: addressId, userId: userId });
+        if (!address) {
+            return res.status(404).json({ 
+                success: false,
+                message: "Address not found or you're not authorized to update this address" 
+            });
+        }
+
+        // Update address
+        const updatedAddress = await Address.findByIdAndUpdate(
+            addressId,
+            {
+                Name,
+                streetAddress,
+                city,
+                state,
+                zipCode,
+                mobile
+            },
+            { new: true } // Return updated document
+        );
+
+        res.status(200).json({
+            success: true,
+            message: "Address updated successfully",
+            address: updatedAddress
+        });
+
+    } catch (error) {
+        console.error(error.message);
+        res.status(500).json({
+            success: false,
+            message: "Server error while updating address"
+        });
+    }
+}

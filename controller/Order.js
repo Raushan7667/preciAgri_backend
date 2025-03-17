@@ -5,8 +5,8 @@ const Cart = require('../models/CartItem');
 exports.createOrder = async (req, res) => {
     try {
         const userId = req.user.id;
-        const { productId, size, quantity, addressId, paymentMethod } = req.body;
-        const cartId = req.params.cartId;
+        const { productId, size, quantity, addressId, paymentMethod, paymentLinkId, paymentLink } = req.body;
+        const cartId =await Cart.findOne({userId:userId})
 
         let orderItems = [];
         let totalAmount = 0;
@@ -77,7 +77,7 @@ exports.createOrder = async (req, res) => {
             return res.status(400).json({ message: "Provide either productId for a single product or cartId for cart items." });
         }
 
-        // Create the order
+        // Create the order with payment details
         const newOrder = new Order({
             userId: userId,
             items: orderItems,
@@ -85,18 +85,25 @@ exports.createOrder = async (req, res) => {
             paymentMethod: paymentMethod,
             shippingAddress: addressId,
             paymentStatus: 'Pending',
-            orderStatus: 'Pending'
+            orderStatus: 'Pending',
+            paymentId: paymentLinkId,    // Add payment link ID
+            // paymentLink: paymentLink      // Add payment link URL
         });
 
         await newOrder.save();
 
         res.status(201).json({
+            success: true,
             message: "Order created successfully.",
             order: newOrder
         });
     } catch (error) {
         console.error(error);
-        res.status(500).json({ message: "Internal server error.", error });
+        res.status(500).json({ 
+            success: false,
+            message: "Internal server error.", 
+            error 
+        });
     }
 };
 

@@ -58,6 +58,9 @@ const orderSchema = new mongoose.Schema({
         type: String,
 
     },
+    paymentLinkId:{
+        type: String,
+    },
     shippingAddress: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Addresses',

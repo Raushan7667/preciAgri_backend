@@ -8,7 +8,7 @@ const {
     getUserByToken,
     getUserProfile,
 } = require("../controller/Auth");
-const { createAddress, getAllAddresses, editAddress, deleteAddress } = require('../controller/Address');
+const { createAddress, getAllAddresses, editAddress, deleteAddress, updateAddress } = require('../controller/Address');
 const { auth, isUser } = require('../middleware/auth');
 
 

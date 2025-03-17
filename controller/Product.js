@@ -33,7 +33,8 @@ exports.createProduct = async (req, res) => {
         console.log("tag: ", _tag)
         console.log("badges: ", badges)
 
-        const image = req.files.image
+        const image = Array.isArray(req.files.image) ? req.files.image : [req.files.image]
+
         console.log("image: ", image)
 
         let tag = JSON.parse(_tag)

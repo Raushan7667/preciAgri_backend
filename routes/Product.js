@@ -7,6 +7,7 @@ const {
     createParentCategory,
     getAllParentCategories,
     getParentCategoryById,
+    getParentCategoriesList
 
 } = require('../controller/Category');
 const { auth, isAdmin, isUser, isSeller } = require('../middleware/auth');
@@ -16,15 +17,14 @@ const { createProduct,
     getProductsByParentCategory,
     getProductsByCategory, 
     seachProduct,
+    getFilteredProducts,
     getAllProductBySeller,
-   
-   
-    filterAndSortProducts, 
     editProduct} = require('../controller/Product');
 
 
 router.post('/createparentcategory', auth, isAdmin, createParentCategory)
 router.get('/getallparentcategory', getAllParentCategories)
+router.get('/getcategorylist', getParentCategoriesList)
 router.post('/getonecategory', getParentCategoryById)
 router.post("/createcategory", auth, isAdmin, createCategory)
 router.get('/getCategory', getCategories)
@@ -42,11 +42,14 @@ router.get('/getproductbycategory', getProductsByCategory)
 
 const { addToProductToCart,
     getCartItems,
-    removeCartItem } = require('../controller/AddToCart');
+    removeCartItem, addProductToCartApp, getCartItemsApp, clearCart } = require('../controller/AddToCart');
 
 router.post('/addtocart', auth, isUser, addToProductToCart)
+router.post('/addtocartapp', auth, isUser, addProductToCartApp)
 router.get('/cartitems', auth, isUser, getCartItems)
+router.get('/cartitemsapp', auth, isUser, getCartItemsApp)
 router.delete('/removeitem/:id', auth, isUser, removeCartItem)
+router.delete('/clearcart', auth, isUser, clearCart);
 
 
 // wishlist
@@ -61,7 +64,7 @@ router.get('/wishlistid', auth, isUser, getWishList)
 router.get('/searchProducts/search',seachProduct)
 router.get('/sellerProductt',auth,isSeller,getAllProductBySeller)
 router.get('/searchProducts/search', seachProduct)
-router.get('/filterandSortProducts', filterAndSortProducts)
+router.get('/filteredproducts', getFilteredProducts)
 
 
 // rating and review

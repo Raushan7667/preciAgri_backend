@@ -6,7 +6,6 @@ exports.createAddress = async (req, res) => {
     try {
         const userId = req.user.id
         const { Name,
-           
             streetAddress,
             city,
             state,
@@ -18,7 +17,6 @@ exports.createAddress = async (req, res) => {
 
         const newAddress = new Address({
             Name,
-          
             userId,
             streetAddress,
             city,
@@ -65,6 +63,36 @@ exports.getAllAddresses = async (req, res) => {
         res.status(500).send("Server error")
     }
 }
+
+exports.editAddress = async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const addressId = req.params.id; // Assuming the address ID is passed in the URL
+        const { Name, streetAddress, city, state, zipCode, mobile } = req.body;
+
+        // Find the address by ID and ensure it belongs to the logged-in user
+        let address = await Address.findOne({ _id: addressId, userId });
+        if (!address) {
+            return res.status(404).json({ message: "Address not found." });
+        }
+
+        // Update the address fields
+        address.Name = Name || address.Name;
+        address.streetAddress = streetAddress || address.streetAddress;
+        address.city = city || address.city;
+        address.state = state || address.state;
+        address.zipCode = zipCode || address.zipCode;
+        address.mobile = mobile || address.mobile;
+
+        // Save the updated address
+        await address.save();
+        res.json({ message: "Address updated successfully", address });
+    } catch (error) {
+        console.error(error.message);
+        res.status(500).send("Server error");
+    }
+};
+
 
 // delete address by id
 

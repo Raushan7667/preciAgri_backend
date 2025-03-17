@@ -315,5 +315,40 @@ exports.getUserByToken = async (req, res) => {
     }
 }
 
+exports.getUserProfile = async (req, res) => {
+    try {
+        const token = req.header('Authorization')?.replace('Bearer ', '');
+        if (!token) {
+            return res.status(401).json({
+                success: false,
+                message: "Unauthorized Access"
+            });
+        }
+
+        const payload = jwt.verify(token, process.env.JWT_SECRET);
+        const user = await User.findById(payload.id).select('_id Name email accountType image');
+
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: "User not found"
+            });
+        }
+
+        res.status(200).json({
+            success: true,
+            user
+        });
+    } catch (error) {
+        console.log(error);
+        return res.status(500).json({
+            success: false,
+            message: "Error while fetching user"
+        });
+    }
+};
+
+
+
 // update password
 

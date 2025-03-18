@@ -6,7 +6,7 @@ exports.createOrder = async (req, res) => {
     try {
         const userId = req.user.id;
         const { productId, size, quantity, addressId, paymentMethod, paymentLinkId, paymentLink } = req.body;
-        const cartId =await Cart.findOne({userId:userId})
+        const cartId = await Cart.findOne({ userId: userId })
 
         let orderItems = [];
         let totalAmount = 0;
@@ -41,14 +41,14 @@ exports.createOrder = async (req, res) => {
         } else if (cartId) {
             // Order for all cart items
             const cart = await Cart.findById(cartId).populate('items.product');
-            console.log("cart is",cart)
+            console.log("cart is", cart)
             if (!cart) {
                 return res.status(404).json({ message: "Cart not found." });
             }
 
             for (const item of cart.items) {
                 const product = item.product;
-               
+
                 const sizeDetail = product.price_size.find((p) => p.size === item.selectedsize);
 
                 if (!sizeDetail) {
@@ -99,10 +99,10 @@ exports.createOrder = async (req, res) => {
         });
     } catch (error) {
         console.error(error);
-        res.status(500).json({ 
+        res.status(500).json({
             success: false,
-            message: "Internal server error.", 
-            error 
+            message: "Internal server error.",
+            error
         });
     }
 };

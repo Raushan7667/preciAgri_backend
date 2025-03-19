@@ -15,11 +15,11 @@ const { createProduct,
     getProductById,
     getAllProducts,
     getProductsByParentCategory,
-    getProductsByCategory, 
+    getProductsByCategory,
     seachProduct,
     getFilteredProducts,
     getAllProductBySeller,
-    editProduct} = require('../controller/Product');
+    editProduct } = require('../controller/Product');
 
 
 router.post('/createparentcategory', auth, isAdmin, createParentCategory)
@@ -44,25 +44,25 @@ const { addToProductToCart,
     getCartItems,
     removeCartItem, addProductToCartApp, getCartItemsApp, clearCart } = require('../controller/AddToCart');
 
-router.post('/addtocart', auth, isUser, addToProductToCart)
-router.post('/addtocartapp', auth, isUser, addProductToCartApp)
-router.get('/cartitems', auth, isUser, getCartItems)
-router.get('/cartitemsapp', auth, isUser, getCartItemsApp)
-router.delete('/removeitem/:id', auth, isUser, removeCartItem)
-router.delete('/clearcart', auth, isUser, clearCart);
+router.post('/addtocart', auth, addToProductToCart)
+router.post('/addtocartapp', auth, addProductToCartApp)
+router.get('/cartitems', auth, getCartItems)
+router.get('/cartitemsapp', auth, getCartItemsApp)
+router.delete('/removeitem/:id', auth, removeCartItem)
+router.delete('/clearcart', auth, clearCart);
 
 
 // wishlist
 const { addToWishList, getWishlistProducts, removeFromWishlist, getWishList, getWishlistProductsMinimal } = require('../controller/WishList')
-router.post('/addwishlist', auth, isUser, addToWishList)
-router.get('/getdetailswishlist', auth, isUser, getWishlistProducts)
-router.get('/getminimalwishlist', auth, isUser, getWishlistProductsMinimal)
-router.post('/removewishlist', auth, isUser, removeFromWishlist)
-router.get('/wishlistid', auth, isUser, getWishList)
+router.post('/addwishlist', auth, addToWishList)
+router.get('/getdetailswishlist', auth, getWishlistProducts)
+router.get('/getminimalwishlist', auth, getWishlistProductsMinimal)
+router.post('/removewishlist', auth, removeFromWishlist)
+router.get('/wishlistid', auth, getWishList)
 
 
-router.get('/searchProducts/search',seachProduct)
-router.get('/sellerProductt',auth,isSeller,getAllProductBySeller)
+router.get('/searchProducts/search', seachProduct)
+router.get('/sellerProductt', auth, isSeller, getAllProductBySeller)
 router.get('/searchProducts/search', seachProduct)
 router.get('/filteredproducts', getFilteredProducts)
 
@@ -74,7 +74,7 @@ router.get("/:productId", getAllRatingsAndReviews);
 
 
 // edit product
-router.put("/editproduct/:productId",auth,isSeller,editProduct)
+router.put("/editproduct/:productId", auth, isSeller, editProduct)
 
 
 module.exports = router;

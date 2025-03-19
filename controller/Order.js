@@ -170,3 +170,53 @@ exports.getSellerOrderHistory = async (req, res) => {
     }
 };
 
+exports.getOrderHistoryApp = async (req, res) => {
+    try {
+        const userId = req.user.id;
+
+        // Use populate to get only the needed fields from the product
+        const orders = await Order.find({ userId })
+            ?.populate({
+                path: 'items.product',
+                select: '_id name images' // Only select these fields from the product
+            })
+            ?.populate('shippingAddress'); // Keeping this if you need address info
+
+        if (!orders) {
+            return res.status(404).json({ message: "No orders found.", orders: [] });
+        }
+
+        // Format the response to include only the required fields
+        const formattedOrders = orders.map(order => {
+            return {
+                _id: order._id,
+                totalAmount: order.totalAmount,
+                paymentMethod: order.paymentMethod,
+                paymentStatus: order.paymentStatus,
+                orderStatus: order.orderStatus,
+                createdAt: order.createdAt,
+                items: order.items.map(item => {
+                    return {
+                        productId: item.product._id,
+                        productName: item.product.name,
+                        imageUrl: item.product.images[0], // Get the first image URL
+                        size: item.size,
+                        price: item.selectedprice,
+                        discountedPrice: item.selectedDiscountedPrice,
+                        quantity: item.quantity
+                    };
+                }),
+                shippingAddress: order.shippingAddress
+            };
+        });
+
+        res.status(200).json({
+            message: "Order history retrieved successfully.",
+            orders: formattedOrders
+        });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: "Internal server error.", error });
+    }
+};
+

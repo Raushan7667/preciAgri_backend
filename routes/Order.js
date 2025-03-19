@@ -2,7 +2,7 @@ const express = require('express');
 
 const router = express.Router()
 
-const { createOrder, getOrderById, getOrderHistory, getSellerOrderHistory,
+const { createOrder, getOrderById, getOrderHistory, getSellerOrderHistory, getOrderHistoryApp,
 
 } = require('../controller/Order');
 
@@ -12,9 +12,9 @@ const { auth,
 const { updatePaymentInformations, createPaymentLinkBeforeOrder, handleWebhook, verifyPayment, createPaymentApp, verifyPaymentApp } = require('../controller/Payment');
 
 router.post('/createorder/', auth, isUser, createOrder)
-router.post('/createorder/', auth, isUser, createOrder)
 router.get('/findeorderbyid/:orderId', auth, isUser, getOrderById)
 router.get('/orderhistory', auth, isUser, getOrderHistory)
+router.get('/orderhistoryapp', auth, isUser, getOrderHistoryApp)
 router.post('/seller/orders', auth, isSeller, getSellerOrderHistory)
 
 

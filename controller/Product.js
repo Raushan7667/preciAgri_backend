@@ -699,3 +699,57 @@ exports.editProduct = async (req, res) => {
         });
     }
 }
+
+
+
+
+// Controller to add a seller to an existing product
+exports.addSellerToProduct = async (req, res) => {
+    try {
+        const { id } = req.params; // Product ID from the URL
+        const { sellerId, price_size, tags, fullShopDetails } = req.body;
+
+        // Validate required fields
+        if (!sellerId || !Array.isArray(price_size) || price_size.length === 0) {
+            return res.status(400).json({ error: 'Invalid or missing seller data' });
+        }
+
+        if (!Array.isArray(tags)) {
+            return res.status(400).json({ error: 'Tags must be an array' });
+        }
+
+        if (!fullShopDetails || typeof fullShopDetails !== 'string') {
+            return res.status(400).json({ error: 'Invalid shop details' });
+        }
+
+        // Find the product and update it by pushing the new seller data
+        const updatedProduct = await Product.findByIdAndUpdate(
+            id,
+            {
+                $push: {
+                    sellers: {
+                        sellerId,
+                        price_size,
+                        tags,
+                        fullShopDetails
+                    }
+                }
+            },
+            { new: true } // Return the updated document
+        );
+
+        // If the product doesn't exist, return a 404 error
+        if (!updatedProduct) {
+            return res.status(404).json({ error: 'Product not found' });
+        }
+
+        // Return success response with the updated product
+        return res.status(200).json({
+            message: 'Seller added successfully',
+            product: updatedProduct
+        });
+    } catch (error) {
+        console.error('Error adding seller to product:', error);
+        return res.status(500).json({ error: 'Server error' });
+    }
+};

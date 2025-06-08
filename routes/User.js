@@ -19,13 +19,13 @@ router.put('/updateaddress/:editingAddressId',auth,isUser,updateAddress)
 router.post("/sendotp", SendOtp)
 router.post("/signup", SignUp)
 router.post("/login", Login)
-router.post('/addaddress', auth, isUser, createAddress)
-router.get('/getaddress', auth, isUser, getAllAddresses)
-router.put('/editaddress/:id', auth, isUser, editAddress)
+router.post('/addaddress', auth,  createAddress)
+router.get('/getaddress', auth,  getAllAddresses)
+router.put('/editaddress/:id', auth,  editAddress)
 router.delete('/deleteaddress/:id', auth, isUser, deleteAddress)
 
 
-router.get('/getuserbyid/:userId', auth, isUser, getUserById)
+router.get('/getuserbyid/:userId', auth,  getUserById)
 router.get('/getuserbytoken', auth, getUserByToken)
 router.get('/getuserprofile', auth, getUserProfile)
 

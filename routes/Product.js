@@ -18,8 +18,11 @@ const { createProduct,
     getProductsByCategory, 
     seachProduct,
     getFilteredProducts,
+   
+    editProduct,
+    addSellerToProduct,
     getAllProductBySeller,
-    editProduct} = require('../controller/Product');
+    } = require('../controller/Product');
 
 
 router.post('/createparentcategory', auth, isAdmin, createParentCategory)
@@ -44,21 +47,21 @@ const { addToProductToCart,
     getCartItems,
     removeCartItem, addProductToCartApp, getCartItemsApp, clearCart } = require('../controller/AddToCart');
 
-router.post('/addtocart', auth, isUser, addToProductToCart)
+router.post('/addtocart', auth, addToProductToCart)
 router.post('/addtocartapp', auth, isUser, addProductToCartApp)
-router.get('/cartitems', auth, isUser, getCartItems)
+router.get('/cartitems', auth, getCartItems)
 router.get('/cartitemsapp', auth, isUser, getCartItemsApp)
-router.delete('/removeitem/:id', auth, isUser, removeCartItem)
+router.delete('/removeitem/:id', auth,  removeCartItem)
 router.delete('/clearcart', auth, isUser, clearCart);
 
 
 // wishlist
 const { addToWishList, getWishlistProducts, removeFromWishlist, getWishList, getWishlistProductsMinimal } = require('../controller/WishList')
-router.post('/addwishlist', auth, isUser, addToWishList)
+router.post('/addwishlist', auth,  addToWishList)
 router.get('/getdetailswishlist', auth, isUser, getWishlistProducts)
 router.get('/getminimalwishlist', auth, isUser, getWishlistProductsMinimal)
-router.post('/removewishlist', auth, isUser, removeFromWishlist)
-router.get('/wishlistid', auth, isUser, getWishList)
+router.post('/removewishlist', auth,removeFromWishlist)
+router.get('/wishlistid', auth, getWishList)
 
 
 router.get('/searchProducts/search',seachProduct)
@@ -75,6 +78,7 @@ router.get("/:productId", getAllRatingsAndReviews);
 
 // edit product
 router.put("/editproduct/:productId",auth,isSeller,editProduct)
+router.put("/addseller/:productId", auth,isSeller,addSellerToProduct);
 
 
 module.exports = router;

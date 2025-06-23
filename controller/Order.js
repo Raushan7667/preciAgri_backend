@@ -5,14 +5,28 @@ const Cart = require('../models/CartItem');
 exports.createOrder = async (req, res) => {
     try {
         const userId = req.user.id;
-        const { productId, size, quantity, addressId, paymentMethod, paymentLinkId, paymentLink } = req.body;
-        const cartId = await Cart.findOne({ userId: userId })
+        console.log(`User ID: ${userId}`);
+        const {
+            productId,
+            size,
+            quantity,
+            addressId,
+            paymentMethod,
+            paymentLinkId,
+            paymentLink,
+            sellerId // <-- Added sellerId from request
+        } = req.body;
+        console.log("sellerId", sellerId)
+
+        let cartId = await Cart.findOne({ userId });
 
         let orderItems = [];
         let totalAmount = 0;
 
+
+
         if (productId) {
-            // Order for a single product
+            // Single Product Order
             const product = await Product.findById(productId);
             if (!product) {
                 return res.status(404).json({ message: "Product not found." });
@@ -28,29 +42,30 @@ exports.createOrder = async (req, res) => {
                 return res.status(400).json({ message: "Insufficient stock for the selected size." });
             }
 
-            // Prepare order item and calculate total amount
+            // Prepare order item
             orderItems.push({
                 product: productId,
                 size: size,
                 selectedprice: sizeDetail.price,
                 selectedDiscountedPrice: sizeDetail.discountedPrice,
-                quantity: quantity
+                quantity: quantity,
+                sellerId: sellerId // <-- Save sellerId here
             });
 
             totalAmount = sizeDetail.discountedPrice * quantity;
         } else if (cartId) {
-            // Order for all cart items
+            // Cart-based Order
             const cart = await Cart.findById(cartId).populate('items.product');
-            console.log("cart is", cart)
-            if (!cart) {
-                return res.status(404).json({ message: "Cart not found." });
+            if (!cart || cart.items.length === 0) {
+                return res.status(404).json({ message: "Cart is empty or not found." });
             }
 
             for (const item of cart.items) {
                 const product = item.product;
+                const seller = product.sellers.find(s => s.sellerId.toString() === item.sellerId.toString());
+                console.log("seller", seller)
 
-                const sizeDetail = product.price_size.find((p) => p.size === item.selectedsize);
-
+                const sizeDetail = seller.price_size.find((p) => p.size === item.selectedsize);
                 if (!sizeDetail) {
                     return res.status(400).json({ message: `Size ${item.selectedsize} not available for product ${product.name}.` });
                 }
@@ -64,7 +79,8 @@ exports.createOrder = async (req, res) => {
                     size: item.selectedsize,
                     selectedprice: sizeDetail.price,
                     selectedDiscountedPrice: sizeDetail.discountedPrice,
-                    quantity: item.quantity
+                    quantity: item.quantity,
+                    sellerId: item.sellerId // <-- Ensure sellerId is included in cart item
                 });
 
                 totalAmount += sizeDetail.discountedPrice * item.quantity;
@@ -86,8 +102,8 @@ exports.createOrder = async (req, res) => {
             shippingAddress: addressId,
             paymentStatus: 'Pending',
             orderStatus: 'Pending',
-            paymentId: paymentLinkId,    // Add payment link ID
-            // paymentLink: paymentLink      // Add payment link URL
+            paymentId: paymentLinkId,
+            paymentLink: paymentLink
         });
 
         await newOrder.save();

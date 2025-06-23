@@ -18,8 +18,11 @@ const { createProduct,
     getProductsByCategory,
     seachProduct,
     getFilteredProducts,
+
+    editProduct,
+    addSellerToProduct,
     getAllProductBySeller,
-    editProduct } = require('../controller/Product');
+} = require('../controller/Product');
 
 
 router.post('/createparentcategory', auth, isAdmin, createParentCategory)
@@ -75,6 +78,7 @@ router.get("/:productId", getAllRatingsAndReviews);
 
 // edit product
 router.put("/editproduct/:productId", auth, isSeller, editProduct)
+router.put("/addseller/:productId", auth, isSeller, addSellerToProduct);
 
 
 module.exports = router;

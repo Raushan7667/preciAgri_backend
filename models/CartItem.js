@@ -4,49 +4,56 @@ const cartSchema = new mongoose.Schema({
     userId: {
         type: mongoose.Schema.Types.ObjectId, // Reference to the user
         ref: 'User',
-        required: true
+        required: true,
     },
     items: [
         {
             product: {
                 type: mongoose.Schema.Types.ObjectId, // Reference to the product
                 ref: 'Product',
-                required: true
+                required: true,
             },
             quantity: {
                 type: Number,
                 required: true,
                 min: 1,
-                default: 1
+                default: 1,
             },
             selectedsize: {
                 type: String,
-                // default: 'size'
+                required: true, // Ensure size is mandatory
             },
             selectedPrice: {
                 type: Number,
-                default: 0
+                required: true,
+                default: 0,
             },
             selecetedDiscountedPrice: {
                 type: Number,
-                default: 0
-            }
-        }
+                required: true,
+                default: 0,
+            },
+            sellerId: {
+                type: mongoose.Schema.Types.ObjectId, // Reference to the seller
+                ref: 'User', // Assuming sellers are stored in the User collection
+                required: true,
+            },
+        },
     ],
     totalPrice: {
         type: Number,
         required: true,
-        default: 0
+        default: 0,
     },
     totalDiscountedPrice: {
         type: Number,
         required: true,
-        default: 0
+        default: 0,
     },
     updatedAt: {
         type: Date,
-        default: Date.now
-    }
+        default: Date.now,
+    },
 });
 
 // Middleware to calculate the total price before saving
@@ -58,7 +65,6 @@ cartSchema.pre('save', function (next) {
     for (const item of this.items) {
         totalDiscountedPrice += item.selecetedDiscountedPrice * item.quantity;
         total += item.selectedPrice * item.quantity;
-
     }
 
     this.totalPrice = total;
@@ -67,7 +73,6 @@ cartSchema.pre('save', function (next) {
 
     next();
 });
-
 
 const Cart = mongoose.model('Cart', cartSchema);
 

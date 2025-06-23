@@ -184,50 +184,88 @@ exports.clearCart = async (req, res) => {
     }
 };
 
-
-// using it for app
 exports.addProductToCartApp = async (req, res) => {
     try {
-        const { productId, quantity, selectedsize, selecetedDiscountedPrice, selectedPrice } = req.body;
+        const { productId, quantity, selectedsize, selecetedDiscountedPrice, selectedPrice, sellerId } = req.body;
         const userId = req.user.id;
 
-        if (!productId || !quantity || !selectedsize) {
-            return res.status(400).json({ message: 'Product ID, quantity, and size are required.' });
+        // Validate required fields
+        if (!productId || !quantity || !selectedsize || !sellerId) {
+            return res.status(400).json({ message: 'Product ID, quantity, size, and seller ID are required.' });
         }
 
+        // Find the product
         const product = await Product.findById(productId);
         if (!product) {
             return res.status(404).json({ message: 'Product not found.' });
         }
 
+        // Verify the seller exists for this product
+        const sellerExists = product.sellers.some(
+            (seller) => seller.sellerId.toString() === sellerId.toString()
+        );
+        if (!sellerExists) {
+            return res.status(404).json({ message: 'Seller not found for this product.' });
+        }
+
         let cart = await Cart.findOne({ userId });
+
         if (cart) {
-            // Check if the product with the same size exists in the cart
+            // Check if the product with the same size AND seller exists in the cart
             const existingItemIndex = cart.items.findIndex(
                 (item) =>
-                    item.product.toString() === productId && item.selectedsize === selectedsize
+                    item.product.toString() === productId &&
+                    item.selectedsize === selectedsize &&
+                    item.sellerId.toString() === sellerId.toString()
             );
 
             if (existingItemIndex > -1) {
-                // Update quantity if the item exists
+                // Update quantity if the item exists (same product + size + seller)
                 cart.items[existingItemIndex].quantity = quantity;
-                // Update the selected price and discounted price if the quantity is updated
+                // Update the selected price and discounted price
                 cart.items[existingItemIndex].selectedPrice = selectedPrice;
                 cart.items[existingItemIndex].selecetedDiscountedPrice = selecetedDiscountedPrice;
+
+                // Ensure the quantity does not exceed the available stock
+                const selectedSizeDetails = product.sellers
+                    .find((seller) => seller.sellerId.toString() === sellerId.toString())
+                    ?.price_size.find((size) => size.size === selectedsize);
+
+                if (cart.items[existingItemIndex].quantity > selectedSizeDetails.quantity) {
+                    cart.items[existingItemIndex].quantity = selectedSizeDetails.quantity;
+                    return res.status(400).json({
+                        message: `Maximum available quantity for this size is ${selectedSizeDetails.quantity}.`,
+                    });
+                }
             } else {
-                // Add a new item to the cart 
-                cart.items.push({ product: productId, quantity, selectedsize, selectedPrice, selecetedDiscountedPrice });
+                // Add as a new item to the cart since either the seller is different or the size is different
+                cart.items.push({
+                    product: productId,
+                    quantity,
+                    selectedsize,
+                    selectedPrice,
+                    selecetedDiscountedPrice,
+                    sellerId
+                });
             }
         } else {
             // Create a new cart for the user
             cart = new Cart({
                 userId,
-                items: [{ product: productId, quantity, selectedsize, selectedPrice, selecetedDiscountedPrice }],
+                items: [{
+                    product: productId,
+                    quantity,
+                    selectedsize,
+                    selectedPrice,
+                    selecetedDiscountedPrice,
+                    sellerId
+                }],
             });
         }
 
         // Save the cart
         await cart.save();
+
         const formattedCart = {
             _id: cart._id,
             userId: cart.userId,
@@ -235,7 +273,13 @@ exports.addProductToCartApp = async (req, res) => {
             totalDiscountedPrice: cart.items.reduce((acc, item) => acc + item.selecetedDiscountedPrice * item.quantity, 0),
             items: await Promise.all(
                 cart.items.map(async (item) => {
-                    const productDetails = await Product.findById(item.product).select('name images');
+                    const productDetails = await Product.findById(item.product).select('name images sellers');
+
+                    // Find seller details
+                    const sellerDetails = productDetails?.sellers?.find(
+                        seller => seller.sellerId.toString() === item.sellerId.toString()
+                    );
+
                     return {
                         _id: item._id,
                         productId: item.product,
@@ -245,6 +289,8 @@ exports.addProductToCartApp = async (req, res) => {
                         selectedsize: item.selectedsize,
                         selectedPrice: item.selectedPrice,
                         selecetedDiscountedPrice: item.selecetedDiscountedPrice,
+                        sellerId: item.sellerId,
+                        sellerName: sellerDetails?.fullShopDetails || 'Unknown Seller',
                     };
                 })
             ),
@@ -260,6 +306,7 @@ exports.addProductToCartApp = async (req, res) => {
     }
 };
 
+// Updated getCartItemsApp function with seller support
 exports.getCartItemsApp = async (req, res) => {
     try {
         const userId = req.user.id;
@@ -269,7 +316,7 @@ exports.getCartItemsApp = async (req, res) => {
             return res.status(404).json({ message: 'Cart not found' });
         }
 
-        // Format response with product details
+        // Format response with product details and seller information
         const formattedCart = {
             _id: cart._id,
             userId: cart.userId,
@@ -277,7 +324,13 @@ exports.getCartItemsApp = async (req, res) => {
             totalDiscountedPrice: cart.items.reduce((acc, item) => acc + item.selecetedDiscountedPrice * item.quantity, 0),
             items: await Promise.all(
                 cart.items.map(async (item) => {
-                    const productDetails = await Product.findById(item.product).select('name images');
+                    const productDetails = await Product.findById(item.product).select('name images sellers');
+
+                    // Find seller details
+                    const sellerDetails = productDetails?.sellers?.find(
+                        seller => seller.sellerId.toString() === item.sellerId.toString()
+                    );
+
                     return {
                         _id: item._id,
                         productId: item.product,
@@ -287,6 +340,8 @@ exports.getCartItemsApp = async (req, res) => {
                         selectedsize: item.selectedsize,
                         selectedPrice: item.selectedPrice,
                         selecetedDiscountedPrice: item.selecetedDiscountedPrice,
+                        sellerId: item.sellerId,
+                        sellerName: sellerDetails?.fullShopDetails || 'Unknown Seller',
                     };
                 })
             ),

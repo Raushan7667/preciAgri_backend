@@ -50,7 +50,7 @@ exports.createPaymentLinkBeforeOrder = async (req, res) => {
 
     } catch (error) {
         console.error("Error in creating payment link:", error);
-        res.status(500).json({ 
+        res.status(500).json({
             success: false,
             message: 'Error in creating payment link'
         });
@@ -63,7 +63,7 @@ exports.handleWebhook = async (req, res) => {
         // Verify webhook signature
         const webhookSecret = process.env.RAZORPAY_WEBHOOK_SECRET;
         const signature = req.headers['x-razorpay-signature'];
-        
+
         const shasum = crypto.createHmac('sha256', webhookSecret);
         shasum.update(JSON.stringify(req.body));
         const digest = shasum.digest('hex');
@@ -77,10 +77,10 @@ exports.handleWebhook = async (req, res) => {
 
         const { payload } = req.body;
         const { payment_link } = payload;
-        
+
         // Find order by payment link ID
         const order = await Order.findOne({ paymentId: payment_link.id });
-        
+
         if (!order) {
             return res.status(404).json({
                 success: false,
@@ -122,7 +122,7 @@ async function handleSuccessfulPayment(order) {
         // Update order status
         order.paymentStatus = 'Completed';
         order.orderStatus = 'Processing';
-        
+
         // Update product quantities
         for (const item of order.items) {
             const product = await Product.findById(item.product);
@@ -169,7 +169,7 @@ exports.verifyPayment = async (req, res) => {
 
         // Find order by payment link ID
         const order = await Order.findOne({ paymentId: razorpay_payment_link_id });
-        
+
         if (!order) {
             return res.status(404).json({
                 success: false,
@@ -232,3 +232,67 @@ exports.verifyPayment = async (req, res) => {
         });
     }
 };
+
+
+exports.createPaymentApp = async (req, res) => {
+    try {
+        const { amount } = req.body;
+
+        // Validate the input
+        if (!amount || amount < 1) {
+            return res.status(400).json({ error: 'Amount is required and should be at least 1' });
+        }
+
+        // Create order options
+        const options = {
+            amount: amount * 100,
+            currency: 'INR',
+            receipt: `receipt_${Date.now()}`,
+            notes: {}
+        };
+
+        // Create order using Razorpay
+        const order = await razorpay.orders.create(options);
+
+        res.json({
+            success: true,
+            order
+        });
+    } catch (error) {
+        console.error('Error creating order:', error);
+        res.status(500).json({ error: error.message });
+    }
+};
+
+exports.verifyPaymentApp = async (req, res) => {
+    try {
+        const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body;
+
+        // Validate input
+        if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
+            return res.status(400).json({ error: 'All fields are required' });
+        }
+
+        // Create a signature using HMAC SHA256
+        const payload = `${razorpay_order_id}|${razorpay_payment_id}`;
+        const expectedSignature = crypto
+            .createHmac('sha256', process.env.RAZORPAY_KEY_SECRET)
+            .update(payload)
+            .digest('hex');
+
+        // Compare signatures
+        const isValid = expectedSignature === razorpay_signature;
+
+        if (isValid) {
+            // Update payment status in your database
+            // ... your database code here
+
+            res.json({ success: true, message: 'Payment verified successfully' });
+        } else {
+            res.status(400).json({ success: false, message: 'Invalid signature' });
+        }
+    } catch (error) {
+        console.error('Error verifying payment:', error);
+        res.status(500).json({ error: error.message });
+    }
+}
